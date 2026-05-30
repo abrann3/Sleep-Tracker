@@ -13,44 +13,64 @@ sleep debt accumulation using a two-process inspired decay model and
 validating it against HRV as a physiological recovery signal.
 
 ## Current Status
-- ✅ Pipeline built and validated on simulated wearable data
-- ✅ Sleep debt model implemented with tunable decay parameter
-- ✅ HRV correlation analysis (r = -0.89 on simulated data)
-- 🔄 Awaiting real wearable data for personal calibration
-- 📋 Planned: self-calibrating decay estimation via HRV feedback
-- 📋 Planned: behavioral annotation layer (caffeine, exercise, stress)
+- ✅ Sleep debt model with asymmetric accumulation/decay (Ti > Td)
+- ✅ HRV correlation layer (r = -0.891 on simulated data)
+- ✅ Grid search parameter calibration across Ti/Td space
+- ✅ Self-calibrating EWMA update system with physiological safeguards
+- ✅ Parameter bounds grounded in Borbély two-process framework
+- 🔄 Awaiting real wearable data for genuine calibration
+- 📋 Planned: cross-validation layer
+- 📋 Planned: behavioral annotation (caffeine, exercise, stress)
 
-## Methods
-**Sleep Debt Model**
-Cumulative sleep debt is modeled as:
-debt_today = (debt_yesterday × decay) + max(0, target - actual_sleep)
+## Model Architecture
 
-Decay constant initialized at 0.85 based on Borbély (1982). 
-Will be empirically calibrated against personal HRV data using 
-grid search optimization once sufficient real data is collected.
+### Sleep Debt Model
+Asymmetric two-parameter debt accumulation based on Borbély (1982):
 
-**HRV Analysis**
-RMSSD and pNN50 extracted from wearable exports. Used as 
-physiological validation signal for sleep debt model — 
-testing the hypothesis that autonomic recovery degrades 
-as sleep debt accumulates.
+debt_today = (debt_yesterday × Td) + (deficit × Ti)  [if undersleeping]
+debt_today = max(0, debt_yesterday × Td + surplus)    [if oversleeping]
 
-## Key Finding (Simulated Data)
-Strong negative correlation between sleep debt and HRV RMSSD 
-(r = -0.89, p < 0.001), consistent with literature on autonomic 
-dysregulation under sleep pressure.
+Ti (accumulation rate) > Td (decay rate), reflecting the 
+empirical finding that sleep pressure builds faster than it 
+dissipates — consistent across humans and Drosophila 
+(Guillaumin et al., Sleep 2024).
 
-## Tech Stack
-- Python, Jupyter Notebook
-- pandas, numpy, matplotlib, scipy
+### Self-Calibrating Parameter System
+Parameters initialized from literature defaults (Ti=1.2, Td=0.85) 
+and updated via EWMA blending as personal data accumulates:
 
-## Roadmap
-1. ✅ Sleep debt model
-2. ✅ HRV correlation layer  
-3. 🔄 Personal device data collection
-4. 📋 Self-calibrating decay parameter
-5. 📋 Behavioral annotation layer
+updated_param = (current × 0.85) + (new_estimate × 0.15)
 
+Update safeguards:
+- Positive correlation windows rejected
+- Weak signal windows rejected (|r| < 0.4)
+- Hard physiological bounds: Ti ∈ [1.0, 2.0], Td ∈ [0.75, 0.95]
+
+### Calibration Phases
+| Phase | Data | Approach |
+|-------|------|----------|
+| Days 1-14 | Insufficient | Literature defaults |
+| Days 14-30 | Early | Full grid search, 0.05 resolution |
+| Days 30-60 | Establishing | Grid search + cross-validation |
+| Days 60+ | Mature | Biweekly EWMA updates |
+
+## Key Hypothesis
+The asymmetric model (Ti > Td) will outperform simple decay 
+on real physiological data, with Ti stabilizing at a personally 
+calibrated value reflecting individual sleep pressure accumulation 
+kinetics. This hypothesis is directly untestable on simulated data 
+and represents the core scientific question of the project.
+
+## Connection to Laboratory Research
+This project extends the author's concurrent research on 
+dopaminergic sleep regulation in Drosophila (Tabuchi Laboratory, 
+CWRU School of Medicine). The two-process model has been 
+validated in Drosophila (Guillaumin et al., 2024), revealing 
+interdependence between circadian clock speed and sleep pressure 
+decay rate — the same Ti/Td relationship this project 
+investigates in humans via wearable data.
 ## References
-- Borbély, A.A. (1982). A two process model of sleep regulation
+- Borbély, A.A. (2022). The two‐process model of sleep regulation: Beginnings and outlook
 - Van Dongen et al. (2003). The cumulative cost of additional wakefulness
+- Thayer et al. (2010). The relationship of autonomic imbalance, heart rate variability and cardiovascular disease risk factors
+- Abhilash, L., & Shafer, O. T. (2023). A two-process model of Drosophila sleep reveals an inter-dependence between circadian clock speed and the rate of sleep pressure decay
